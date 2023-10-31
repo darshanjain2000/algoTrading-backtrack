@@ -129,7 +129,7 @@ def single_day_trade_upper(df, symbol):
         return (symbol[0], sell_at, buy_at, high, low, entry_time, exit_time,entry_price, exit_price, sell_price, buy_price, "DayEnd", "upper", stop_loss, pAndL)
     
 def single_day_trade_lower(df, symbol):
-    candle_above_upper = 0
+    candle_below_lower = 0
     
     sell_at = None
     sell_price = 0
@@ -148,9 +148,9 @@ def single_day_trade_lower(df, symbol):
         if(not buy_done):
             if(pd.to_datetime(row["datetime"].split(" ")[1]).time() < datetime.strptime('11:30', '%H:%M').time()):
                 if((row['open'] > row['close']) and (row['close'] < row['lower_band'])):  # to check red candle closes below bollinger lower value
-                    candle_above_upper += 1
+                    candle_below_lower += 1
                 else:
-                    if(candle_above_upper >= 2 and (row['open'] < row['close'])): # check green candle after atleast 2 red below bollinger lower value
+                    if(candle_below_lower >= 2 and (row['open'] < row['close'])): # check green candle after atleast 2 red below bollinger lower value
                         stop_loss = row['low']    # stoploss is signal candle low
                         buy_price = row['high']   # buy is signal candle high
                         buy_at = row["datetime"]  # signal candle time
@@ -159,7 +159,7 @@ def single_day_trade_lower(df, symbol):
                         high = row['high']
                         low = row['low']
 
-                    candle_above_upper = 0
+                    candle_below_lower = 0
         else:
             # to check stoploss is trigger after entry
             if(row["open"] <= stop_loss or row["high"] <= stop_loss or row["low"] <= stop_loss or row["close"] <= stop_loss):
@@ -251,7 +251,7 @@ def single_day_trade_upper_next(df, symbol):
         return (symbol[0], sell_at, buy_at, high, low, entry_time, exit_time,entry_price, exit_price, sell_price, buy_price, "DayEnd", "upper", stop_loss, pAndL)
     
 def single_day_trade_lower_next(df, symbol):
-    candle_above_upper = 0
+    candle_below_lower = 0
     
     sell_at = None
     sell_price = 0
@@ -272,9 +272,9 @@ def single_day_trade_lower_next(df, symbol):
             if(not signal_candle):
                 if(pd.to_datetime(row["datetime"].split(" ")[1]).time() < datetime.strptime('12:00', '%H:%M').time()):
                     if(row['close'] < row['lower_band']):  # to check red candle closes below bollinger lower value
-                        candle_above_upper += 1
+                        candle_below_lower += 1
                     else:
-                        if(candle_above_upper >= 2 and (row['open'] < row['close'])): # check green candle after atleast 2 red below bollinger lower value
+                        if(candle_below_lower >= 2 and (row['open'] < row['close'])): # check green candle after atleast 2 red below bollinger lower value
                             stop_loss = row['low']    # stoploss is signal candle low
                             buy_price = row['high']   # buy is signal candle high
                             buy_at = row["datetime"]  # signal candle time
@@ -283,7 +283,7 @@ def single_day_trade_lower_next(df, symbol):
                             high = row['high']
                             low = row['low']
 
-                        candle_above_upper = 0
+                        candle_below_lower = 0
             else:
                 if(row['high'] > buy_price and pd.to_datetime(row["datetime"].split(" ")[1]).time() <= datetime.strptime('12:00', '%H:%M').time()): #(within 2 next candle next_to_signal_candle["upper"] is greater than signal["upper"] then entry is signal cangdle entry )
                     buy_done = True
@@ -381,7 +381,7 @@ def single_day_trade_upper_next_rsi(df, symbol):
         return (symbol[0], sell_at, buy_at, high, low, entry_time, exit_time,entry_price, exit_price, sell_price, buy_price, "DayEnd", "upper", stop_loss, pAndL)
     
 def single_day_trade_lower_next_rsi(df, symbol):
-    candle_above_upper = 0
+    candle_below_lower = 0
     
     sell_at = None
     sell_price = 0
@@ -404,9 +404,9 @@ def single_day_trade_lower_next_rsi(df, symbol):
             if(not signal_candle):
                 if(pd.to_datetime(row["datetime"].split(" ")[1]).time() < datetime.strptime('12:00', '%H:%M').time()):
                     if(row['close'] < row['lower_band']):  # to check red candle closes below bollinger lower value
-                        candle_above_upper += 1
+                        candle_below_lower += 1
                     else:
-                        if(candle_above_upper >= 2 and (row['open'] < row['close'])): # check green candle after atleast 2 red below bollinger lower value
+                        if(candle_below_lower >= 2 and (row['open'] < row['close'])): # check green candle after atleast 2 red below bollinger lower value
                             if(rsi_low <= 20):
                                 stop_loss = row['low']    # stoploss is signal candle low
                                 buy_price = row['high']   # buy is signal candle high
@@ -416,7 +416,7 @@ def single_day_trade_lower_next_rsi(df, symbol):
                                 high = row['high']
                                 low = row['low']
 
-                        candle_above_upper = 0
+                        candle_below_lower = 0
             else:
                 if(row['high'] > buy_price and pd.to_datetime(row["datetime"].split(" ")[1]).time() <= datetime.strptime('12:00', '%H:%M').time()): #(within 2 next candle next_to_signal_candle["upper"] is greater than signal["upper"] then entry is signal cangdle entry )
                     buy_done = True
@@ -519,7 +519,7 @@ def single_day_trade_upper_next_with_percentange_change_min_3day(df, symbol):
         return (symbol[0], sell_at, buy_at, high, low, entry_time, exit_time,entry_price, exit_price, sell_price, buy_price, "DayEnd", "upper", stop_loss, pAndL)
     
 def single_day_trade_lower_next_with_percentange_change_min_3day(df, symbol):
-    candle_above_upper = 0
+    candle_below_lower = 0
     
     sell_at = None
     sell_price = 0
@@ -540,9 +540,9 @@ def single_day_trade_lower_next_with_percentange_change_min_3day(df, symbol):
             if(not signal_candle):
                 if(pd.to_datetime(row["datetime"].split(" ")[1]).time() < datetime.strptime('12:00', '%H:%M').time()):
                     if(row['close'] < row['lower_band']):  # to check red candle closes below bollinger lower value
-                        candle_above_upper += 1
+                        candle_below_lower += 1
                     else:
-                        if(candle_above_upper >= 2 and (row['open'] < row['close'])): # check green candle after atleast 2 red below bollinger lower value
+                        if(candle_below_lower >= 2 and (row['open'] < row['close'])): # check green candle after atleast 2 red below bollinger lower value
                             stop_loss = row['low']    # stoploss is signal candle low
                             buy_price = row['high']   # buy is signal candle high
                             buy_at = row["datetime"]  # signal candle time
@@ -551,7 +551,7 @@ def single_day_trade_lower_next_with_percentange_change_min_3day(df, symbol):
                             high = row['high']
                             low = row['low']
 
-                        candle_above_upper = 0
+                        candle_below_lower = 0
             else:
                 if(row['high'] > buy_price and pd.to_datetime(row["datetime"].split(" ")[1]).time() <= datetime.strptime('12:00', '%H:%M').time()): #(within 2 next candle next_to_signal_candle["upper"] is greater than signal["upper"] then entry is signal cangdle entry )
                     buy_done = True
@@ -938,7 +938,7 @@ def calc_funds():
     available_funds = 100000
     risk = 0.005
 
-    df = pd.read_csv(f"bollinger on data set/signals_next.csv")
+    df = pd.read_csv(f"bollinger on data set/signals_next_with_percentange_change_min_3day.csv")
 
     day = "2022-01-05"
     day_pl = 0
@@ -972,7 +972,7 @@ def calc_funds():
     colums_header = ["Symbol", "Sell Time", "Buy Time", "High at order", "Low at order", "Entry", "Exit", "Entry Price", "Exit Price", "Sell Price", "Buy Price", "Exit Type", "Operation", "StopLoss", "P and L","net p&l","funds" ]
     # colums_header = ["Symbol", "Sell Time", "Sell Price", "Buy Time", "Buy Price", "High at order", "Low at order", "Exit Type", "Operation", "P and L", "Stop Loss","net SL","net p&l","funds"]
     signals_df = pd.DataFrame(net_pl, columns=colums_header)
-    signals_df.to_csv("bollinger on data set/signals_next_pl.csv")
+    signals_df.to_csv("bollinger on data set/signals_next_with_percentange_change_min_3day_pl.csv")
 
 def generate_rsi_values_csv():
     def calculate_rsi(data, period=14):
