@@ -4,6 +4,72 @@ import os
 import json
 import math
 
+def get_percentage_change_of_last_min_3days_red(stock_name, trigger_date):
+    path = "bollinger on data set/csv data/2022/1day"
+    df = pd.read_csv(f"{path}/{stock_name[0]+'.csv'}")
+
+    for index, row in df.iterrows():
+        if(row["datetime"].split(" ")[0] == trigger_date.split(" ")[0]):
+            break
+    
+    high_low_data = [] #t-1day candle, t-2day candle,...
+    red_candle = 0
+    if(index>3): # to handle first 3 dates of data
+        keep_check = True
+        while(keep_check):
+           index -= 1
+           temp_candle_open = df.iloc[index]["open"]
+           temp_candle_close = df.iloc[index]["close"]
+
+           if(temp_candle_open > temp_candle_close):
+               high_low_data.append((df.iloc[index]["high"],df.iloc[index]["low"]))
+               red_candle +=1
+           else:
+               keep_check = False
+
+    percentage_change = None
+    if(red_candle >= 3):
+        agg_high = high_low_data[-1][0] #high of t-x day
+        agg_low = high_low_data[0][1] #low of t-1 day
+
+        percentage_change = ((agg_high - agg_low)/agg_high) * 100
+
+        percentage_change = percentage_change*-1 # since its a loss
+
+    return percentage_change
+
+def get_percentage_change_of_last_min_3days_green(stock_name, trigger_date):
+    path = "bollinger on data set/csv data/2022/1day"
+    df = pd.read_csv(f"{path}/{stock_name[0]+'.csv'}")
+
+    for index, row in df.iterrows():
+        if(row["datetime"].split(" ")[0] == trigger_date.split(" ")[0]):
+            break
+    
+    high_low_data = [] #t-1day candle, t-2day candle,...
+    green_candle = 0
+    if(index>3): # to handle first 3 dates of data
+        keep_check = True
+        while(keep_check):
+           index -= 1
+           temp_candle_open = df.iloc[index]["open"]
+           temp_candle_close = df.iloc[index]["close"]
+
+           if(temp_candle_open < temp_candle_close):
+               high_low_data.append((df.iloc[index]["high"],df.iloc[index]["low"]))
+               green_candle +=1
+           else:
+               keep_check = False
+
+    percentage_change = None
+    if(green_candle >= 3):
+        agg_high = high_low_data[0][0] #high of t-1 day
+        agg_low = high_low_data[-1][1] #low of t-x day
+
+        percentage_change = ((agg_high - agg_low)/agg_low) * 100
+
+    return percentage_change
+
 def single_day_trade_upper(df, symbol):
     candle_above_upper = 0
     
@@ -380,6 +446,149 @@ def single_day_trade_lower_next_rsi(df, symbol):
     else:
         return (symbol[0], sell_at, buy_at, high, low, entry_time, exit_time,entry_price, exit_price, sell_price, buy_price, "DayEnd", "lower", stop_loss, pAndL)
 
+def single_day_trade_upper_next_with_percentange_change_min_3day(df, symbol):
+    candle_above_upper = 0
+    
+    sell_at = None
+    sell_price = 0
+    buy_at = None
+    buy_price = 0
+
+    sell_done = False
+    signal_candle = False
+    
+    stop_loss = 0
+    stop_loss_trigger = False
+
+    high = 0
+    low = 0
+
+    for index, row in df.iterrows():
+        if(not sell_done):
+            if(not signal_candle):
+                if(pd.to_datetime(row["datetime"].split(" ")[1]).time() < datetime.strptime('12:00', '%H:%M').time()):
+                    if(row['close']> row['upper_band']): # check green candle closing above bollinger value //TO-DO no need for green or red candle check
+                        candle_above_upper += 1
+                    else:
+                        if(candle_above_upper >= 2 and (row['open'] > row['close'])): # check red candle after atleast 2 green below bollinger above value
+                            stop_loss = row['high'] # stoploss is signal candle high
+                            sell_price = row['low'] # entry is signal candle low
+                            sell_at = row["datetime"] # signal candle time
+                            signal_candle = True
+
+                            high = row['high']
+                            low = row['low']
+
+                        candle_above_upper = 0   
+            else:
+                if(row['low'] < sell_price and pd.to_datetime(row["datetime"].split(" ")[1]).time() <= datetime.strptime('12:00', '%H:%M').time()): #(within 2 next candle next_to_signal_candle["low"] is less than signal["low"] then entry is signal cangdle entry )
+                    sell_done = True
+                
+        else:
+            # to check stoploss is trigger after entry
+            if(row["open"] >= stop_loss or row["high"] >= stop_loss or row["low"] >= stop_loss or row["close"] >= stop_loss):
+                buy_price = stop_loss
+                buy_at = row["datetime"]
+                stop_loss_trigger = True
+                break
+            # to check day end is trigger after entry and stoploss is not triggered
+            if(pd.to_datetime(row["datetime"].split(" ")[1]).time().hour == 15):
+                buy_price = row["open"]
+                buy_at = row["datetime"]
+                break
+    
+    if(sell_done):
+        change = get_percentage_change_of_last_min_3days_green(symbol, buy_at)
+        if(change == None or change < 6):
+            sell_at = None
+            sell_price = 0
+            buy_at = None
+            buy_price = 0
+
+    pAndL = sell_price - buy_price
+
+    entry_time = sell_at
+    exit_time = buy_at
+
+    entry_price = sell_price
+    exit_price = buy_price
+
+    if(stop_loss_trigger):
+        return (symbol[0], sell_at, buy_at, high, low, entry_time, exit_time, entry_price, exit_price, sell_price, buy_price, "StopLoss", "upper", stop_loss, pAndL)
+    else:
+        return (symbol[0], sell_at, buy_at, high, low, entry_time, exit_time,entry_price, exit_price, sell_price, buy_price, "DayEnd", "upper", stop_loss, pAndL)
+    
+def single_day_trade_lower_next_with_percentange_change_min_3day(df, symbol):
+    candle_above_upper = 0
+    
+    sell_at = None
+    sell_price = 0
+    buy_at = None
+    buy_price = 0
+
+    buy_done = False
+    signal_candle = False
+
+    stop_loss = 0
+    stop_loss_trigger = False
+
+    high = 0
+    low = 0
+
+    for index, row in df.iterrows():
+        if(not buy_done):
+            if(not signal_candle):
+                if(pd.to_datetime(row["datetime"].split(" ")[1]).time() < datetime.strptime('12:00', '%H:%M').time()):
+                    if(row['close'] < row['lower_band']):  # to check red candle closes below bollinger lower value
+                        candle_above_upper += 1
+                    else:
+                        if(candle_above_upper >= 2 and (row['open'] < row['close'])): # check green candle after atleast 2 red below bollinger lower value
+                            stop_loss = row['low']    # stoploss is signal candle low
+                            buy_price = row['high']   # buy is signal candle high
+                            buy_at = row["datetime"]  # signal candle time
+                            buy_done = True
+
+                            high = row['high']
+                            low = row['low']
+
+                        candle_above_upper = 0
+            else:
+                if(row['high'] > buy_price and pd.to_datetime(row["datetime"].split(" ")[1]).time() <= datetime.strptime('12:00', '%H:%M').time()): #(within 2 next candle next_to_signal_candle["upper"] is greater than signal["upper"] then entry is signal cangdle entry )
+                    buy_done = True
+        else:
+            # to check stoploss is trigger after entry
+            if(row["open"] <= stop_loss or row["high"] <= stop_loss or row["low"] <= stop_loss or row["close"] <= stop_loss):
+                sell_price = stop_loss
+                sell_at = row["datetime"]
+                stop_loss_trigger = True
+                break
+            # to check day end is trigger after entry and stoploss is not triggered
+            if(pd.to_datetime(row["datetime"].split(" ")[1]).time().hour == 15):
+                sell_price = row["open"]
+                sell_at = row["datetime"]
+                break
+    
+    if(buy_done):
+        change = get_percentage_change_of_last_min_3days_red(symbol, sell_at)
+        if(change == None or change > -6):
+            sell_at = None
+            sell_price = 0
+            buy_at = None
+            buy_price = 0
+
+    pAndL = sell_price - buy_price
+
+    entry_time = buy_at
+    exit_time = sell_at
+
+    entry_price = buy_price
+    exit_price = sell_price
+
+    if(stop_loss_trigger):
+        return (symbol[0], sell_at, buy_at, high, low, entry_time, exit_time, entry_price, exit_price, sell_price, buy_price, "StopLoss", "lower", stop_loss, pAndL)
+    else:
+        return (symbol[0], sell_at, buy_at, high, low, entry_time, exit_time,entry_price, exit_price, sell_price, buy_price, "DayEnd", "lower", stop_loss, pAndL)
+
 
 def get_2022_data():
     base_path = "clean data/15min"
@@ -655,6 +864,76 @@ def apply_with_rsi():
     signals_df.to_csv("bollinger on data set/signals_next_rsi.csv")
     print(error)
 
+def apply_next_with_percentange_change_min_3day():
+    f = open('bollinger on data set/daily_sorted_stock_diff_sorted.json')
+    data = json.load(f)
+
+    signals = []
+    error = []
+    top_size = 10
+    for day in data:
+        signal = []
+
+        gainer = data[day][-top_size:]
+        loser = data[day][:top_size]
+
+        for top in gainer:
+            df = pd.read_csv(f"bollinger on data set/csv data/2022/bollinger values/{top[0]}.csv")
+            day_df = df[df['datetime'].str.startswith(day)]
+            if(len(day_df) == 25):
+                upper = single_day_trade_upper_next_with_percentange_change_min_3day(day_df,top)
+                lower = single_day_trade_lower_next_with_percentange_change_min_3day(day_df,top)
+                
+                if(upper[1] != None):# to remove not fullfilled request
+                    signal.append(upper)
+                if(lower[1] != None):
+                    signal.append(lower)
+
+            else:
+                print(f"day data size is not 25 for {low}@{day}")
+                error.append(f"{low}@{day}")
+            
+        for low in loser:
+            df = pd.read_csv(f"bollinger on data set/csv data/2022/bollinger values/{low[0]}.csv")
+            day_df = df[df['datetime'].str.startswith(day)]
+            if(len(day_df) == 25):
+                upper = single_day_trade_upper_next_with_percentange_change_min_3day(day_df,low)
+                lower = single_day_trade_lower_next_with_percentange_change_min_3day(day_df,low)
+                
+                if(upper[1] != None): # to remove not fullfilled request
+                    signal.append(upper)
+                if(lower[1] != None):
+                    signal.append(lower)
+            else:
+                print(f"day data size is not 25 for {low}@{day}")
+                error.append(f"{low}@{day}")
+
+        if(len(signal)>5):
+
+            def key_function(item):
+                format_string = "%Y-%m-%d %H:%M:%S"
+
+                if(item[12] == "lower"): #if(row["Operation"] == "lower"):
+                    date_time_obj = datetime.strptime(item[2], format_string) # row["Buy Time"]
+                if(item[12] == "upper"):
+                    date_time_obj = datetime.strptime(item[1], format_string) # row["Sell Time"]
+                
+                return date_time_obj.time()
+
+            sorted_data = sorted(signal, key=key_function)
+
+            signals.extend(sorted_data[:5])
+
+        else:
+            signals.extend(signal)
+
+        print("done",day)
+
+    signals_df = pd.DataFrame(signals, columns=["Symbol", "Sell Time", "Buy Time", "High at order", "Low at order", "Entry", "Exit", "Entry Price", "Exit Price", "Sell Price", "Buy Price", "Exit Type", "Operation", "StopLoss", "P and L" ])
+    signals_df.dropna(inplace=True)
+    signals_df.to_csv("bollinger on data set/signals_next_with_percentange_change_min_3day.csv")
+    print(error)
+
 def calc_funds():
     available_funds = 100000
     risk = 0.005
@@ -727,4 +1006,5 @@ def generate_rsi_values_csv():
         rsi_values = calculate_rsi(df_15min["close"], rsi_period)
         df_15min["RSI"] = rsi_values
         df_15min.to_csv(f"bollinger on data set/csv data/2022/bollinger values/rsi value/{csv}", index=False)
+
 
