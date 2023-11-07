@@ -1,0 +1,5 @@
+{
+    "python.analysis.extraPaths": [
+        "./money_money/smartapi-python-main"
+    ]
+}
