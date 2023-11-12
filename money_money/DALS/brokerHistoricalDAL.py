@@ -29,6 +29,11 @@ class BrokerHistoricalDAL:
 
     def get_candle_data(self, symbolToken, interval, fromDate, toDate, exchange = "NSE"):
         try:
+            if(type(fromDate) != str):
+                fromDate = fromDate.strftime("%Y-%m-%d %H:%M")
+            if(type(toDate) != str):
+                toDate = toDate.strftime("%Y-%m-%d %H:%M")
+                
             historicParam={
             "exchange": exchange,
             "symboltoken": symbolToken,
@@ -42,7 +47,7 @@ class BrokerHistoricalDAL:
             else:
                 return None
         except Exception as e:
-            print("Historic Api failed: {}".format(e.message))
+            print(f"Historic Api failed: {e}")
 
     def log_out(self):
         try:
@@ -53,4 +58,4 @@ class BrokerHistoricalDAL:
 
 
 
-print(BrokerHistoricalDAL().get_candle_data("3045", "ONE_MINUTE", "2023-11-05 09:00", "2023-11-09 09:16"))
+# print(BrokerHistoricalDAL().get_candle_data("3045", "FIVE_MINUTE", "2023-11-08 09:15", "2023-11-08 09:31"))
