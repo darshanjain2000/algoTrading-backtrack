@@ -34,9 +34,9 @@ class DailyScanner:
         yesterday = datetime.datetime.combine(self.invokeTime - timedelta(days=1), datetime.time(15, 29))
 
         abc = self.historicalClient.get_candle_data(self.symbolToken, CandleIntervals.ONE_DAY, last_date_for_moving_avg, yesterday)[-self.moving_avg_period:] # last self.moving_avg_period days data
-        last_close_price_list = [i[4] for i in abc]
+        last_volume_price_list = [i[5] for i in abc]
         
-        return first_15_min_volume/(sum(last_close_price_list)/len(last_close_price_list))
+        return first_15_min_volume/(sum(last_volume_price_list)/len(last_volume_price_list))
     
     def money_money_value(self):
         percentage_change = self.get_percentage_change()

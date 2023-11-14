@@ -1,43 +1,69 @@
 from SmartApi import SmartConnect
 import json
 import pyotp
+from SmartApi.smartWebSocketV2 import SmartWebSocketV2
+from logzero import logger
 
 class BrokerLiveDAL:
     def __init__(self):
         config_file = open("money_money/config.json")
         configs = json.load(config_file)
-        api_key = configs["LiveAPI"]["KEY"]
-        self.clientId = configs["AngleONE"]["ClientId"]
+        API_KEY = configs["LiveAPI"]["KEY"]
+        CLIENT_ID = configs["AngleONE"]["ClientId"]
         pwd = configs["AngleONE"]["Password"]
 
         token = configs["AngleONE"]["TOTP Code"]
         totp=pyotp.TOTP(token).now()
 
-        self.smartApi = SmartConnect(api_key)
-        data = self.smartApi.generateSession(self.clientId, pwd, totp)
+        self.smartApi = SmartConnect(API_KEY)
+        login_data = self.smartApi.generateSession(CLIENT_ID, pwd, totp)
+
+        JWT_TOKEN = login_data["data"]["jwtToken"]
+        RESFRESH_TOKEN = login_data["data"]["refreshToken"]
+        # feedToken = self.smartApi.getfeedToken()        
+        FEED_TOKEN = login_data["data"]["feedToken"]
+
+        self.sws = SmartWebSocketV2(JWT_TOKEN, API_KEY, CLIENT_ID, FEED_TOKEN)
 
     def get_candle_data(self, symbolToken, mode = "OHLC", exchange = "NSE"):
-        pass
-        # try:
-        #     if(type(fromDate) != str):
-        #         fromDate = fromDate.strftime("%Y-%m-%d %H:%M")
-        #     if(type(toDate) != str):
-        #         toDate = toDate.strftime("%Y-%m-%d %H:%M")
-                
-        #     historicParam={
-        #     "exchange": exchange,
-        #     "symboltoken": symbolToken,
-        #     "interval": interval,
-        #     "fromdate": fromDate, 
-        #     "todate": toDate #"2021-02-08 09:16"
-        #     }
-        #     candle_data = self.smartApi.getCandleData(historicParam)
-        #     if(candle_data["message"] == "SUCCESS"):
-        #         return candle_data['data']
-        #     else:
-        #         return None
-        # except Exception as e:
-        #     print(f"Historic Api failed: {e}")
+        correlation_id = "alphanumid"
+        mode = 1  # 1.LTP; 2.Quote; 3.Snap Quote
+        token_list = [
+            {
+                "exchangeType": 1,
+                "tokens": [symbolToken]
+            }
+            # {
+            #     "exchangeType": 1,
+            #     "tokens": ["26009"]
+            # }
+        ]
+
+        def on_data(wsapp, message):
+            logger.info("Ticks: {}".format(message))
+            # close_connection()
+
+        def on_open(wsapp):
+            logger.info("on open")
+            self.sws.subscribe(correlation_id, mode, token_list)
+
+        def on_error(wsapp, error):
+            logger.error(error)
+
+        def on_close(wsapp):
+            logger.info("Close")
+
+        def close_connection():
+            self.sws.close_connection()
+
+
+        # Assign the callbacks.
+        self.sws.on_open = on_open
+        self.sws.on_data = on_data
+        self.sws.on_error = on_error
+        self.sws.on_close = on_close
+
+        temp = self.sws.connect()
 
     def log_out(self):
         try:
@@ -45,3 +71,5 @@ class BrokerLiveDAL:
             print("Logout Successfull")
         except Exception as e:
             print("Logout failed: {}".format(e.message))
+
+BrokerLiveDAL().get_candle_data("3045")

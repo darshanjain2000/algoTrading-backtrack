@@ -8,8 +8,8 @@ from money_money.utils.constants import CandleIntervals
 
 class MMService:
     def __init__(self):
-        self.invoke_date = datetime.date.today() - datetime.timedelta(days=3)
-        # self.invoke_date = datetime.date.today()
+        # self.invoke_date = datetime.date.today() - datetime.timedelta(days=3)
+        self.invoke_date = datetime.date.today()
 
     def find_stocks_for_trade(self):
         f = open('money_money/utils/nifty_200_token_map.json')
@@ -28,7 +28,7 @@ class MMService:
 
         return selected_stocks
     
-    def sell_stretigy(self, stock_token):
+    def sell_strategy(self, stock_token):
         historicalBrokerDAL = BrokerHistoricalDAL()
 
         today_date_9_15 = datetime.datetime.combine(self.invoke_date, datetime.time(9, 15))
@@ -62,7 +62,7 @@ class MMService:
             # check live data 
             realTimeBrokerDAL = BrokerLiveDAL()
             while True:
-                candle_data_5_min = realTimeBrokerDAL.get_candle_data()
+                candle_data_5_min = realTimeBrokerDAL.get_candle_data(stock_token)
                 lowest_so_far = min(lowest_so_far, candle_data_5_min[2])
                 
                 # check if any candle close in upper 40%
