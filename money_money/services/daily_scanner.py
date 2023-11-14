@@ -1,26 +1,45 @@
 from datetime import timedelta
 import datetime
 
+from money_money.DALS.brokerHistoricalDAL import BrokerHistoricalDAL
+from money_money.utils.constants import CandleIntervals
 
-class daily_scanner:
-    def __init__(self, invoke_date, stock):
+class DailyScanner:
+    def __init__(self, stockSymbolToken, invokeTime):
         self.moving_avg_period = 20
-        self.invoke_date = invoke_date
-        self.stock = stock
+        self.symbolToken = stockSymbolToken
+        self.invokeTime = invokeTime
+        self.historicalClient = BrokerHistoricalDAL()
 
     def get_percentage_change(self):
-        yesterday = self.invoke_date - timedelta(days=1)
+        yesterday = self.invokeTime - timedelta(days=1)
 
-        today_date_9_29 = datetime.datetime.combine(datetime.date.today(), datetime.time(9, 29))
-        change = get_olhcv_by_date_time(self.stock, today_date_9_29).close - get_day_close_by_date(self.stock, yesterday)
+        today_date_9_28 = datetime.datetime.combine(self.invokeTime, datetime.time(9, 28))
+        today_date_9_29 = datetime.datetime.combine(self.invokeTime, datetime.time(9, 29))
 
-        return (change/get_day_close_by_date(self.stock, yesterday))* 100
+        
+        # 9:29 CLOSE - last day CLOSE
+        change = self.historicalClient.get_candle_data(self.symbolToken, CandleIntervals.ONE_MINUTE, today_date_9_28, today_date_9_29)[-1][4] - self.historicalClient.get_candle_data(self.symbolToken, CandleIntervals.ONE_DAY, yesterday, self.invokeTime)[-1][4]
+        
+        # ((9:29 CLOSE - last day CLOSE)/last day CLOSE)*100
+        return (change/self.historicalClient.get_candle_data(self.symbolToken, CandleIntervals.ONE_DAY, yesterday, self.invokeTime)[-1][4])* 100
     
     def get_mm_factor(self):
-        first_15_min_volume = get_olhcv_by_datetime_no_of_candle(self.stock, datetime.date.today(),0,15).volume # candle from(0) to(15)
-        close_price_list = get_day_close_by_date_range(self.stock, datetime.date.today()-1 ,datetime.date.today()-self.moving_avg_period-1)
         
-        return first_15_min_volume/close_price_list.mean()
+        today_date_9_15 = datetime.datetime.combine(self.invokeTime, datetime.time(9, 15))
+        today_date_9_30 = datetime.datetime.combine(self.invokeTime, datetime.time(9, 30))
+        first_15_min_volume = self.historicalClient.get_candle_data(self.symbolToken, CandleIntervals.FIFTEEN_MINUTE, today_date_9_15, today_date_9_30)[-1][5]
+        
+        last_date_for_moving_avg = datetime.datetime.combine(self.invokeTime - timedelta(days = self.moving_avg_period*2), datetime.time(15, 28)) # *2 to overcome non trading days
+        yesterday = datetime.datetime.combine(self.invokeTime - timedelta(days=1), datetime.time(15, 29))
+
+        abc = self.historicalClient.get_candle_data(self.symbolToken, CandleIntervals.ONE_DAY, last_date_for_moving_avg, yesterday)[-self.moving_avg_period:] # last self.moving_avg_period days data
+        last_volume_price_list = [i[5] for i in abc]
+        
+        return first_15_min_volume/(sum(last_volume_price_list)/len(last_volume_price_list))
     
     def money_money_value(self):
-        return get_percentage_change() * get_mm_factor()
+        percentage_change = self.get_percentage_change()
+        money_money_factor = self.get_mm_factor()
+        # self.historicalClient.log_out()
+        return percentage_change * money_money_factor
