@@ -54,21 +54,56 @@ class MMService:
             return None
 
         signal_candle = None
+        entry = None
+        stoploss = None
+        quantity = None
 
         if(check_further_candle):
             lowest_so_far = 999999
             for i in first_15_min_data:
                 lowest_so_far = min(lowest_so_far, i[3]) # i[3] is low of candle
             # check live data 
-            realTimeBrokerDAL = BrokerLiveDAL()
-            while True:
-                candle_data_5_min = realTimeBrokerDAL.get_candle_data(stock_token)
-                lowest_so_far = min(lowest_so_far, candle_data_5_min[2])
-                
-                # check if any candle close in upper 40%
-                live_candle_open = candle_data_5_min[0][1]
-                live_candle_high = candle_data_5_min[0][2]
-                live_candle_low = candle_data_5_min[0][3]
-                live_candle_close = candle_data_5_min[0][4]
+            stream_5min_data_DAL = BrokerLiveDAL(5)
+            stream_5min_data_DAL.stream_candle_data(stock_token)
 
-                threshhold_40 = (live_candle_high-live_candle_low)*0.4
+            last_itr_index = 0
+            while True:
+                if(len(stream_5min_data_DAL.candle_data_list) == last_itr_index+1):
+                    if(signal_candle == None):
+                        candle_data_5_min = stream_5min_data_DAL.candle_data_list[-1]
+                        lowest_so_far = min(lowest_so_far, candle_data_5_min["low"])
+                        
+                        # check if any candle close in upper 40%
+                        live_candle_open = candle_data_5_min["open"]
+                        live_candle_high = candle_data_5_min["high"]
+                        live_candle_low = candle_data_5_min["low"]
+                        live_candle_close = candle_data_5_min["close"]
+                        live_candle_timesatmp = candle_data_5_min["timestamp"]
+
+                        threshhold_40 = (live_candle_high-live_candle_low)*0.4
+
+                        if(live_candle_close >= threshhold_40):
+                            signal_candle = [live_candle_open, live_candle_high, live_candle_low, live_candle_close, live_candle_timesatmp, last_itr_index]
+                    else:
+                        # do entry, stop loss logic
+                        if(lowest_so_far <= signal_candle[2]):
+                            entry = signal_candle[2]
+                            stoploss = None
+                            for indx,candle in enumerate(stream_5min_data_DAL.candle_data_list):
+                                if(candle["close"]>candle["open"] and indx < signal_candle[5]):
+                                    stoploss = candle["high"]
+
+                        if(entry != None and stoploss != None):
+                            risk = 0.005 * captial
+                            quantity = risk/entry-stoploss
+                            break
+                        
+                    last_itr_index+= 1
+
+        return {
+                "entry_price":entry,
+                "stoploss" : stoploss,
+                "quantity" : quantity,
+                "stock_token": stock_token
+            }
+        
