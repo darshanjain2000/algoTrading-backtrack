@@ -100,7 +100,8 @@ def single_day_trade_upper(df, symbol):
 
                         high = row['high']
                         low = row['low']
-
+                    else: 
+                        break # so to cehck that all candle starting from first should follow trend
                     candle_above_upper = 0 
         else:
             # to check stoploss is trigger after entry
@@ -158,7 +159,8 @@ def single_day_trade_lower(df, symbol):
 
                         high = row['high']
                         low = row['low']
-
+                    else: 
+                        break # so to cehck that all candle starting from first should follow trend
                     candle_below_lower = 0
         else:
             # to check stoploss is trigger after entry
@@ -218,7 +220,8 @@ def single_day_trade_upper_next(df, symbol):
 
                             high = row['high']
                             low = row['low']
-
+                        else: 
+                            break # so to cehck that all candle starting from first should follow trend
                         candle_above_upper = 0   
             else:
                 if(row['low'] < sell_price and pd.to_datetime(row["datetime"].split(" ")[1]).time() <= datetime.strptime('12:00', '%H:%M').time()): #(within 2 next candle next_to_signal_candle["low"] is less than signal["low"] then entry is signal cangdle entry )
@@ -282,7 +285,8 @@ def single_day_trade_lower_next(df, symbol):
 
                             high = row['high']
                             low = row['low']
-
+                        else: 
+                            break # so to cehck that all candle starting from first should follow trend
                         candle_below_lower = 0
             else:
                 if(row['high'] > buy_price and pd.to_datetime(row["datetime"].split(" ")[1]).time() <= datetime.strptime('12:00', '%H:%M').time()): #(within 2 next candle next_to_signal_candle["upper"] is greater than signal["upper"] then entry is signal cangdle entry )
@@ -348,7 +352,8 @@ def single_day_trade_upper_next_rsi(df, symbol):
 
                                 high = row['high']
                                 low = row['low']
-
+                        else: 
+                            break # so to cehck that all candle starting from first should follow trend
                         candle_above_upper = 0   
             else:
                 if(row['low'] < sell_price and pd.to_datetime(row["datetime"].split(" ")[1]).time() <= datetime.strptime('12:00', '%H:%M').time()): #(within 2 next candle next_to_signal_candle["low"] is less than signal["low"] then entry is signal cangdle entry )
@@ -415,7 +420,8 @@ def single_day_trade_lower_next_rsi(df, symbol):
 
                                 high = row['high']
                                 low = row['low']
-
+                        else: 
+                            break # so to cehck that all candle starting from first should follow trend
                         candle_below_lower = 0
             else:
                 if(row['high'] > buy_price and pd.to_datetime(row["datetime"].split(" ")[1]).time() <= datetime.strptime('12:00', '%H:%M').time()): #(within 2 next candle next_to_signal_candle["upper"] is greater than signal["upper"] then entry is signal cangdle entry )
@@ -478,7 +484,8 @@ def single_day_trade_upper_next_with_percentange_change_min_3day(df, symbol):
 
                             high = row['high']
                             low = row['low']
-
+                        else: 
+                            break # so to cehck that all candle starting from first should follow trend
                         candle_above_upper = 0   
             else:
                 if(row['low'] < sell_price and pd.to_datetime(row["datetime"].split(" ")[1]).time() <= datetime.strptime('12:00', '%H:%M').time()): #(within 2 next candle next_to_signal_candle["low"] is less than signal["low"] then entry is signal cangdle entry )
@@ -550,7 +557,8 @@ def single_day_trade_lower_next_with_percentange_change_min_3day(df, symbol):
 
                             high = row['high']
                             low = row['low']
-
+                        else: 
+                            break # so to cehck that all candle starting from first should follow trend
                         candle_below_lower = 0
             else:
                 if(row['high'] > buy_price and pd.to_datetime(row["datetime"].split(" ")[1]).time() <= datetime.strptime('12:00', '%H:%M').time()): #(within 2 next candle next_to_signal_candle["upper"] is greater than signal["upper"] then entry is signal cangdle entry )
@@ -1006,3 +1014,276 @@ def generate_rsi_values_csv():
         rsi_values = calculate_rsi(df_15min["close"], rsi_period)
         df_15min["RSI"] = rsi_values
         df_15min.to_csv(f"bollinger on data set/csv data/2022/bollinger values/rsi value/{csv}", index=False)
+
+
+def apply_basic():
+    f = open('bollinger on data set/daily_sorted_stock_diff_sorted.json')
+    data = json.load(f)
+
+    signals = []
+    error = []
+    top_size = 10
+    for day in data:
+        signal = []
+
+        gainer = data[day][-top_size:]
+        loser = data[day][:top_size]
+
+        for top in gainer:
+            df = pd.read_csv(f"bollinger on data set/csv data/2022/bollinger values/{top[0]}.csv")
+            day_df = df[df['datetime'].str.startswith(day)]
+            if(len(day_df) == 25):
+                upper = single_day_trade_upper(day_df,top)
+                lower = single_day_trade_lower(day_df,top)
+                
+                if(upper[1] != None):# to remove not fullfilled request
+                    signal.append(upper)
+                if(lower[1] != None):
+                    signal.append(lower)
+
+            else:
+                print(f"day data size is not 25 for {low}@{day}")
+                error.append(f"{low}@{day}")
+            
+        for low in loser:
+            df = pd.read_csv(f"bollinger on data set/csv data/2022/bollinger values/{low[0]}.csv")
+            day_df = df[df['datetime'].str.startswith(day)]
+            if(len(day_df) == 25):
+                upper = single_day_trade_upper(day_df,low)
+                lower = single_day_trade_lower(day_df,low)
+                
+                if(upper[1] != None): # to remove not fullfilled request
+                    signal.append(upper)
+                if(lower[1] != None):
+                    signal.append(lower)
+            else:
+                print(f"day data size is not 25 for {low}@{day}")
+                error.append(f"{low}@{day}")
+
+        if(len(signal)>5):
+
+            def key_function(item):
+                format_string = "%Y-%m-%d %H:%M:%S"
+
+                if(item[12] == "lower"): #if(row["Operation"] == "lower"):
+                    date_time_obj = datetime.strptime(item[2], format_string) # row["Buy Time"]
+                if(item[12] == "upper"):
+                    date_time_obj = datetime.strptime(item[1], format_string) # row["Sell Time"]
+                
+                return date_time_obj.time()
+
+            sorted_data = sorted(signal, key=key_function)
+
+            signals.extend(sorted_data[:5])
+
+        else:
+            signals.extend(signal)
+
+        print("done",day)
+
+    signals_df = pd.DataFrame(signals, columns=["Symbol", "Sell Time", "Buy Time", "High at order", "Low at order", "Entry", "Exit", "Entry Price", "Exit Price", "Sell Price", "Buy Price", "Exit Type", "Operation", "StopLoss", "P and L" ])
+    signals_df.dropna(inplace=True)
+    print(error)
+    return signals_df
+
+def apply_and_check_next_any_candle_cross_value():
+    f = open('bollinger on data set/daily_sorted_stock_diff_sorted.json')
+    data = json.load(f)
+
+    signals = []
+    error = []
+    top_size = 10
+    for day in data:
+        signal = []
+
+        gainer = data[day][-top_size:]
+        loser = data[day][:top_size]
+
+        for top in gainer:
+            df = pd.read_csv(f"bollinger on data set/csv data/2022/bollinger values/{top[0]}.csv")
+            day_df = df[df['datetime'].str.startswith(day)]
+            if(len(day_df) == 25):
+                upper = single_day_trade_upper_next(day_df,top)
+                lower = single_day_trade_lower_next(day_df,top)
+                
+                if(upper[1] != None):# to remove not fullfilled request
+                    signal.append(upper)
+                if(lower[1] != None):
+                    signal.append(lower)
+
+            else:
+                print(f"day data size is not 25 for {low}@{day}")
+                error.append(f"{low}@{day}")
+            
+        for low in loser:
+            df = pd.read_csv(f"bollinger on data set/csv data/2022/bollinger values/{low[0]}.csv")
+            day_df = df[df['datetime'].str.startswith(day)]
+            if(len(day_df) == 25):
+                upper = single_day_trade_upper_next(day_df,low)
+                lower = single_day_trade_lower_next(day_df,low)
+                
+                if(upper[1] != None): # to remove not fullfilled request
+                    signal.append(upper)
+                if(lower[1] != None):
+                    signal.append(lower)
+            else:
+                print(f"day data size is not 25 for {low}@{day}")
+                error.append(f"{low}@{day}")
+
+        if(len(signal)>5):
+
+            def key_function(item):
+                format_string = "%Y-%m-%d %H:%M:%S"
+
+                if(item[12] == "lower"): #if(row["Operation"] == "lower"):
+                    date_time_obj = datetime.strptime(item[2], format_string) # row["Buy Time"]
+                if(item[12] == "upper"):
+                    date_time_obj = datetime.strptime(item[1], format_string) # row["Sell Time"]
+                
+                return date_time_obj.time()
+
+            sorted_data = sorted(signal, key=key_function)
+
+            signals.extend(sorted_data[:5])
+
+        else:
+            signals.extend(signal)
+
+        print("done",day)
+
+    signals_df = pd.DataFrame(signals, columns=["Symbol", "Sell Time", "Buy Time", "High at order", "Low at order", "Entry", "Exit", "Entry Price", "Exit Price", "Sell Price", "Buy Price", "Exit Type", "Operation", "StopLoss", "P and L" ])
+    signals_df.dropna(inplace=True)
+    print(error)
+    return signals_df
+
+def apply_and_check_next_any_candle_cross_value_and_last_atleast_3_days_percentage_change_6percent():
+    f = open('bollinger on data set/daily_sorted_stock_diff_sorted.json')
+    data = json.load(f)
+
+    signals = []
+    error = []
+    top_size = 10
+    for day in data:
+        signal = []
+
+        gainer = data[day][-top_size:]
+        loser = data[day][:top_size]
+
+        for top in gainer:
+            df = pd.read_csv(f"bollinger on data set/csv data/2022/bollinger values/{top[0]}.csv")
+            day_df = df[df['datetime'].str.startswith(day)]
+            if(len(day_df) == 25):
+                upper = single_day_trade_upper_next_with_percentange_change_min_3day(day_df,top)
+                lower = single_day_trade_lower_next_with_percentange_change_min_3day(day_df,top)
+                
+                if(upper[1] != None):# to remove not fullfilled request
+                    signal.append(upper)
+                if(lower[1] != None):
+                    signal.append(lower)
+
+            else:
+                print(f"day data size is not 25 for {low}@{day}")
+                error.append(f"{low}@{day}")
+            
+        for low in loser:
+            df = pd.read_csv(f"bollinger on data set/csv data/2022/bollinger values/{low[0]}.csv")
+            day_df = df[df['datetime'].str.startswith(day)]
+            if(len(day_df) == 25):
+                upper = single_day_trade_upper_next_with_percentange_change_min_3day(day_df,low)
+                lower = single_day_trade_lower_next_with_percentange_change_min_3day(day_df,low)
+                
+                if(upper[1] != None): # to remove not fullfilled request
+                    signal.append(upper)
+                if(lower[1] != None):
+                    signal.append(lower)
+            else:
+                print(f"day data size is not 25 for {low}@{day}")
+                error.append(f"{low}@{day}")
+
+        if(len(signal)>5):
+
+            def key_function(item):
+                format_string = "%Y-%m-%d %H:%M:%S"
+
+                if(item[12] == "lower"): #if(row["Operation"] == "lower"):
+                    date_time_obj = datetime.strptime(item[2], format_string) # row["Buy Time"]
+                if(item[12] == "upper"):
+                    date_time_obj = datetime.strptime(item[1], format_string) # row["Sell Time"]
+                
+                return date_time_obj.time()
+
+            sorted_data = sorted(signal, key=key_function)
+
+            signals.extend(sorted_data[:5])
+
+        else:
+            signals.extend(signal)
+
+        print("done",day)
+
+    signals_df = pd.DataFrame(signals, columns=["Symbol", "Sell Time", "Buy Time", "High at order", "Low at order", "Entry", "Exit", "Entry Price", "Exit Price", "Sell Price", "Buy Price", "Exit Type", "Operation", "StopLoss", "P and L" ])
+    signals_df.dropna(inplace=True)
+    print(error)
+    return signals_df
+
+
+def calculate_pl(df):
+    available_funds = 100000
+    risk = 0.005
+
+    day = "2022-01-05"
+    day_pl = 0
+    
+    net_pl=[]
+
+    for index, row in df.iterrows():
+        if(day == row["Sell Time"].split(" ")[0]):          
+            if(row["Operation"] == "upper"):
+                quantity = math.floor(abs((risk*available_funds)/(row["Sell Price"]-row["StopLoss"])))
+            if(row["Operation"] == "lower"):
+                quantity = math.floor(abs((risk*available_funds)/(row["Buy Price"]-row["StopLoss"])))
+            row["net PL"] = quantity*row["P and L"]
+            row["funds"] = available_funds
+            day_pl += row["net PL"]
+        else:
+            day = row["Sell Time"].split(" ")[0]
+            available_funds += day_pl
+            day_pl = 0
+
+            if(row["Operation"] == "upper"):
+                quantity = math.floor(abs((risk*available_funds)/(row["Sell Price"]-row["StopLoss"])))
+            if(row["Operation"] == "lower"):
+                quantity = math.floor(abs((risk*available_funds)/(row["Buy Price"]-row["StopLoss"])))
+            row["net PL"] = quantity*row["P and L"]
+            row["funds"] = available_funds
+            day_pl += row["net PL"]
+        
+        net_pl.append((row[0],row[1],row[2],row[3],row[4],row[5],row[6],row[7],row[8],row[9],row[10],row[11],row[12],row[13],row[14], row[15],row[16]))
+
+    colums_header = ["Symbol", "Sell Time", "Buy Time", "High at order", "Low at order", "Entry", "Exit", "Entry Price", "Exit Price", "Sell Price", "Buy Price", "Exit Type", "Operation", "StopLoss", "P and L","net p&l","funds" ]
+    # colums_header = ["Symbol", "Sell Time", "Sell Price", "Buy Time", "Buy Price", "High at order", "Low at order", "Exit Type", "Operation", "P and L", "Stop Loss","net SL","net p&l","funds"]
+    signals_df = pd.DataFrame(net_pl, columns=colums_header)
+    return signals_df
+
+def backtrack_basic_bollinger():
+    df = apply_basic()
+    data_frame_with_funds_calc = calculate_pl(df)
+
+    data_frame_with_funds_calc.to_csv("bollinger on data set/basic_bolllingers_pl.csv")
+
+def backtrack_bollinger_witch_next_candle_check():
+    df = apply_and_check_next_any_candle_cross_value()
+    data_frame_with_funds_calc = calculate_pl(df)
+
+    data_frame_with_funds_calc.to_csv("bollinger on data set/next_candle_check_bolllingers_pl.csv")
+
+def backtrack_bollinger_witch_next_candle_with_atleast_3days_change_percentage():
+    df = apply_and_check_next_any_candle_cross_value_and_last_atleast_3_days_percentage_change_6percent()
+    data_frame_with_funds_calc = calculate_pl(df)
+
+    data_frame_with_funds_calc.to_csv("bollinger on data set/atleast_3days_change_percentage_in_bollinger_pl.csv")
+
+
+backtrack_basic_bollinger()
+backtrack_bollinger_witch_next_candle_check()
+backtrack_bollinger_witch_next_candle_with_atleast_3days_change_percentage()
