@@ -79,29 +79,29 @@ class BrokerLiveDAL:
 
     def append_candle_data(self, tick):
         last_traded_price = tick['last_traded_price']
-        tick_time = datetime.fromtimestamp(tick['exchange_timestamp'] / 1000)  # Convert milliseconds to seconds
+        tick_time = datetime.datetime.fromtimestamp(tick['exchange_timestamp'] / 1000)  # Convert milliseconds to seconds
 
         # Initialize a new candlestick if it's the first tick or a new candle interval has started
-        if self.last_candlestick_time is None or tick_time >= self.last_candlestick_time + self.candlestick_interval:
-            if self.current_candle:
-                self.candlesticks.append(self.current_candle)  # Append completed candlestick to the list
-            self.last_candlestick_time = tick_time.replace(second=0, microsecond=0)
-            self.current_candle = {
+        if len(self.candle_data_list) == 0 or tick_time >= self.candle_data_list[-1]["timestamp"] + self.candlestick_interval:
+            self.candle_data_list.append({
                 "open": last_traded_price,
                 "high": last_traded_price,
                 "low": last_traded_price,
                 "close": last_traded_price,
-                "timestamp": self.last_candlestick_time
-            }
+                "timestamp": tick_time
+            })
         else:
             # Update current candlestick with new tick data
-            self.current_candle['high'] = max(self.current_candle['high'], last_traded_price)
-            self.current_candle['low'] = min(self.current_candle['low'], last_traded_price)
-            self.current_candle['close'] = last_traded_price
+            self.candle_data_list[-1]['high'] = max(self.candle_data_list[-1]['high'], last_traded_price)
+            self.candle_data_list[-1]['low'] = min(self.candle_data_list[-1]['low'], last_traded_price)
+            self.candle_data_list[-1]['close'] = last_traded_price
 
     def stream_candle_data(self, symbolToken):
         self.get_candle_data(symbolToken)
 
-obj = BrokerLiveDAL()
-obj.get_five_min_candle_data()
-obj.get_candle_data("3045")
+stream_5min_data_DAL = BrokerLiveDAL(1)
+stream_5min_data_DAL.stream_candle_data("3045")
+
+while True:
+    print(stream_5min_data_DAL.candle_data_list)
+    candle_data_5_min = stream_5min_data_DAL.candle_data_list[-1]
