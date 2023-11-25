@@ -1,3 +1,4 @@
+import datetime
 from SmartApi import SmartConnect
 import json
 import pyotp
@@ -5,7 +6,7 @@ from SmartApi.smartWebSocketV2 import SmartWebSocketV2
 from logzero import logger
 
 class BrokerLiveDAL:
-    def __init__(self):
+    def __init__(self, interval):
         config_file = open("money_money/config.json")
         configs = json.load(config_file)
         API_KEY = configs["LiveAPI"]["KEY"]
@@ -25,6 +26,9 @@ class BrokerLiveDAL:
 
         self.sws = SmartWebSocketV2(JWT_TOKEN, API_KEY, CLIENT_ID, FEED_TOKEN)
 
+        self.candle_data_list = []
+        self.candlestick_interval = datetime.timedelta(minutes=interval)
+
     def get_candle_data(self, symbolToken, mode = "OHLC", exchange = "NSE"):
         correlation_id = "alphanumid"
         mode = 1  # 1.LTP; 2.Quote; 3.Snap Quote
@@ -41,6 +45,7 @@ class BrokerLiveDAL:
 
         def on_data(wsapp, message):
             logger.info("Ticks: {}".format(message))
+            self.append_candle_data(message)
             # close_connection()
 
         def on_open(wsapp):
@@ -72,4 +77,31 @@ class BrokerLiveDAL:
         except Exception as e:
             print("Logout failed: {}".format(e.message))
 
-BrokerLiveDAL().get_candle_data("3045")
+    def append_candle_data(self, tick):
+        last_traded_price = tick['last_traded_price']
+        tick_time = datetime.datetime.fromtimestamp(tick['exchange_timestamp'] / 1000)  # Convert milliseconds to seconds
+
+        # Initialize a new candlestick if it's the first tick or a new candle interval has started
+        if len(self.candle_data_list) == 0 or tick_time >= self.candle_data_list[-1]["timestamp"] + self.candlestick_interval:
+            self.candle_data_list.append({
+                "open": last_traded_price,
+                "high": last_traded_price,
+                "low": last_traded_price,
+                "close": last_traded_price,
+                "timestamp": tick_time
+            })
+        else:
+            # Update current candlestick with new tick data
+            self.candle_data_list[-1]['high'] = max(self.candle_data_list[-1]['high'], last_traded_price)
+            self.candle_data_list[-1]['low'] = min(self.candle_data_list[-1]['low'], last_traded_price)
+            self.candle_data_list[-1]['close'] = last_traded_price
+
+    def stream_candle_data(self, symbolToken):
+        self.get_candle_data(symbolToken)
+
+stream_5min_data_DAL = BrokerLiveDAL(1)
+stream_5min_data_DAL.stream_candle_data("3045")
+
+while True:
+    print(stream_5min_data_DAL.candle_data_list)
+    candle_data_5_min = stream_5min_data_DAL.candle_data_list[-1]
