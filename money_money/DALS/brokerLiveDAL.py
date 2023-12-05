@@ -1,4 +1,6 @@
 import datetime
+import threading
+import time
 from SmartApi import SmartConnect
 import json
 import pyotp
@@ -6,7 +8,7 @@ from SmartApi.smartWebSocketV2 import SmartWebSocketV2
 from logzero import logger
 
 class BrokerLiveDAL:
-    def __init__(self, interval):
+    def __init__(self, interval, symbolToken):
         config_file = open("money_money/config.json")
         configs = json.load(config_file)
         API_KEY = configs["LiveAPI"]["KEY"]
@@ -29,13 +31,15 @@ class BrokerLiveDAL:
         self.candle_data_list = []
         self.candlestick_interval = datetime.timedelta(minutes=interval)
 
-    def get_candle_data(self, symbolToken, mode = "OHLC", exchange = "NSE"):
+        self.symbolToken = symbolToken
+
+    def get_candle_data(self, mode = "OHLC", exchange = "NSE"):
         correlation_id = "alphanumid"
         mode = 1  # 1.LTP; 2.Quote; 3.Snap Quote
         token_list = [
             {
                 "exchangeType": 1,
-                "tokens": [symbolToken]
+                "tokens": [self.symbolToken]
             }
             # {
             #     "exchangeType": 1,
@@ -96,12 +100,14 @@ class BrokerLiveDAL:
             self.candle_data_list[-1]['low'] = min(self.candle_data_list[-1]['low'], last_traded_price)
             self.candle_data_list[-1]['close'] = last_traded_price
 
-    def stream_candle_data(self, symbolToken):
-        self.get_candle_data(symbolToken)
+    def stream_candle_data(self):
+        t = threading.Thread(target = self.get_candle_data, name="CandleDataStreamer")
+        t.daemon = True
+        t.start()
 
-stream_5min_data_DAL = BrokerLiveDAL(1)
-stream_5min_data_DAL.stream_candle_data("3045")
+# stream_5min_data_DAL = BrokerLiveDAL(1,"3045")
+# stream_5min_data_DAL.stream_candle_data()
 
-while True:
-    print(stream_5min_data_DAL.candle_data_list)
-    candle_data_5_min = stream_5min_data_DAL.candle_data_list[-1]
+# while True:
+#     print(stream_5min_data_DAL.candle_data_list)
+#     candle_data_5_min = stream_5min_data_DAL.candle_data_list[-1]
