@@ -3,11 +3,11 @@ import json
 import pyotp
 
 
-class BrokerHistoricalDAL:
+class BrokerHistoricalDAL2:
     def __init__(self):
         config_file = open("money_money/config.json")
         configs = json.load(config_file)
-        api_key = configs["HistorialAPI"]["KEY"]
+        api_key = configs["HistorialAPI2"]["KEY"]
         self.clientId = configs["AngleONE"]["ClientId"]
         pwd = configs["AngleONE"]["Password"]
 
@@ -43,7 +43,7 @@ class BrokerHistoricalDAL:
             }
             candle_data = self.smartApi.getCandleData(historicParam)
             if(candle_data["message"] == "SUCCESS"):
-                return candle_data['data'] # [timestamp, open, high, low, close, volume]
+                return candle_data['data']
             else:
                 return None
         except Exception as e:

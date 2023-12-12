@@ -31,6 +31,8 @@ class BrokerLiveDAL:
         self.candle_data_list = []
         self.candlestick_interval = datetime.timedelta(minutes=interval)
 
+        self.live_data = []
+
         self.symbolToken = symbolToken
 
     def get_candle_data(self, mode = "OHLC", exchange = "NSE"):
@@ -94,7 +96,9 @@ class BrokerLiveDAL:
                 "close": last_traded_price,
                 "timestamp": tick_time
             })
+            self.live_data = []
         else:
+            self.live_data.append(last_traded_price)
             # Update current candlestick with new tick data
             self.candle_data_list[-1]['high'] = max(self.candle_data_list[-1]['high'], last_traded_price)
             self.candle_data_list[-1]['low'] = min(self.candle_data_list[-1]['low'], last_traded_price)
