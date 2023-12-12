@@ -47,7 +47,7 @@ class BrokerHistoricalDAL:
             else:
                 return None
         except Exception as e:
-            print(f"Historic Api failed: {e}")
+            print(f"Historic Api failed: {e.code} :{e}")
 
     def log_out(self):
         try:
