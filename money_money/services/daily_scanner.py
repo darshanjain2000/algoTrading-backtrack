@@ -69,14 +69,16 @@ class DailyScanner:
      
     def calculate_old_details(self, symbolToken):
         try:
-            last_date_for_moving_avg = datetime.datetime.combine(self.invokeDate - timedelta(days = self.moving_avg_period*2), datetime.time(15, 28)) # *2 to overcome non trading days
-            yesterday = datetime.datetime.combine(self.invokeDate - timedelta(days=1), datetime.time(15, 29))
+            last_date_for_moving_avg = datetime.datetime.combine(self.invokeDate - timedelta(days = self.moving_avg_period*2), datetime.time(15, 30)) # *2 to overcome non trading days
+            last_5_days = datetime.datetime.combine(self.invokeDate - timedelta(days=5), datetime.time(15, 30)) # to counter any holidays after/before weekend
+            yesterday = datetime.datetime.combine(self.invokeDate - timedelta(days=1), datetime.time(15, 30))
 
-            abc = self.historicalClient.get_candle_data(symbolToken, CandleIntervals.ONE_DAY, last_date_for_moving_avg, yesterday)[-self.moving_avg_period:] # last self.moving_avg_period days data
-            last_volume_list = [i[5] for i in abc]
+            one_day_data_for_period = self.historicalClient.get_candle_data(symbolToken, CandleIntervals.ONE_DAY,
+                                                                             last_date_for_moving_avg, yesterday)[-self.moving_avg_period:] # last self.moving_avg_period days data
+            last_volume_list = [i[5] for i in one_day_data_for_period]
 
             mm_data = MM_data()
-            mm_data.last_day_close = self.historicalClient.get_candle_data(symbolToken, CandleIntervals.ONE_DAY, yesterday, self.invokeDate)[-1][4]
+            mm_data.last_day_close = self.historicalClient.get_candle_data(symbolToken, CandleIntervals.ONE_DAY, last_5_days, yesterday)[-1][4]
             mm_data.volume_moving_avg = sum(last_volume_list)/len(last_volume_list)
 
             self.dailyData[symbolToken] = mm_data
@@ -115,7 +117,7 @@ class DailyScanner:
 
         return first_15_min_volume/volume_moving_avg
     
-    def money_money_value2(self, symbolToken, clientCode):
+    def money_money_value_with_15min_data(self, symbolToken, clientCode):
         today_date_9_15 = datetime.datetime.combine(self.invokeDate, datetime.time(9, 15))
         today_date_9_30 = datetime.datetime.combine(self.invokeDate, datetime.time(9, 30))
 
