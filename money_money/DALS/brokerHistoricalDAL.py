@@ -55,3 +55,8 @@ class BrokerHistoricalDAL:
             print("Logout Successfull")
         except Exception as e:
             print("Logout failed: {}".format(e.message))
+
+
+# import datetime
+# data = BrokerHistoricalDAL().get_candle_data('547', "ONE_MINUTE", datetime.datetime.combine(datetime.date.today()-datetime.timedelta(days = 1), datetime.time(9, 15)), datetime.datetime.combine(datetime.date.today()-datetime.timedelta(days = 1), datetime.time(9, 30)), exchange = "NSE")
+# print(data)

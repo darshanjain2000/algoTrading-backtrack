@@ -53,7 +53,7 @@ class BrokerLiveDAL:
         ]
 
         def on_data(wsapp, message):
-            logger.info("Ticks: {}".format(message))
+            # logger.info("Ticks: {}".format(message))
             self.append_candle_data(message)
             # close_connection()
 
@@ -100,6 +100,13 @@ class BrokerLiveDAL:
                 "close": last_traded_price,
                 "timestamp": tick_time
             })
+            # print({
+            #     "open": last_traded_price,
+            #     "high": last_traded_price,
+            #     "low": last_traded_price,
+            #     "close": last_traded_price,
+            #     "timestamp": tick_time
+            # })
             self.live_data[symbol_token] = []
         else:
             self.live_data[symbol_token].append(last_traded_price)
@@ -114,9 +121,8 @@ class BrokerLiveDAL:
         t.start()
 
     def close_web_socket(self):
-        # self.sws.close_connection()
-        self.sws.on_close()
-
+        self.sws.close_connection()
+        
 # stream_5min_data_DAL = BrokerLiveDAL(1,"3045")
 # stream_5min_data_DAL.stream_candle_data()
 
