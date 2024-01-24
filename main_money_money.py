@@ -16,7 +16,7 @@ def main():
         fifteen_min_data = i[2][1][:-1] #since its 16 min data 9:15 to 9:30
 
         if(mm_service.get_stock_for_live_else_place_order(stock_token, stock_name, fifteen_min_data)):
-            stocks_for_live.append((stock_token, stock_name, min([j[3] for j in fifteen_min_data]))) # min fo 15 min
+            stocks_for_live.append((stock_token, stock_name, min([j[3] for j in fifteen_min_data]))) # min of 15 min
 
     mm_service.init_websocket([i[0] for i in stocks_for_live]) # stocks symbol token
 

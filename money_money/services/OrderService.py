@@ -6,7 +6,7 @@ class OrderService:
     def check_total_positions():
         pass
 
-    def place_sllimit_order(trade_details: TradeDetails): 
+    def place_sllimit_order(self, trade_details:TradeDetails): 
         order_dal = OrderDAL()
         order_dal.placeSLLimitOrder(trade_details.stock_name, trade_details.stock_token, trade_details.entry, trade_details.stoploss, trade_details.quantity)       
         print({

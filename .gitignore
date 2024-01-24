@@ -4,3 +4,4 @@ bollinger on data set/csv data/2022/*
 
 money_money/config.json
 myenv/*
+__pycache__

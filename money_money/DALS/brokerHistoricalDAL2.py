@@ -15,17 +15,8 @@ class BrokerHistoricalDAL2:
         totp=pyotp.TOTP(token).now()
 
         self.smartApi = SmartConnect(api_key)
-        data = self.smartApi.generateSession(self.clientId, pwd, totp)
-        # authToken = data['data']['jwtToken']
-        # refreshToken = data['data']['refreshToken']
+        # data = self.smartApi.generateSession(self.clientId, pwd, totp)
 
-        # # fetch the feedtoken
-        # feedToken = self.smartApi.getfeedToken()
-
-        # # fetch User Profile
-        # res = self.smartApi.getProfile(refreshToken)
-        # self.smartApi.generateToken(refreshToken)
-        # res=res['data']['exchanges']
 
     def get_candle_data(self, symbolToken, interval, fromDate, toDate, exchange = "NSE"):
         try:

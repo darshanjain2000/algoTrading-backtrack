@@ -3,7 +3,7 @@ import json
 import time
 from money_money.DALS.brokerHistoricalDAL import BrokerHistoricalDAL
 from money_money.DALS.brokerLiveDAL import BrokerLiveDAL
-from money_money.Services.OrderService import OrderService, place_sllimit_order
+from money_money.Services.OrderService import OrderService
 from money_money.Services.daily_scanner import DailyScanner
 from money_money.utils.constants import CandleIntervals
 from pytz import timezone
@@ -31,8 +31,8 @@ class MMService:
 
         start_time_oldData = time.time()
         for stock in nifty_50_token:
-            time.sleep(1) # rate limit to get candle data is 3
             daily_scan_obj.calculate_old_details(nifty_50_token[stock])
+            time.sleep(1) # rate limit to get candle data is 3
         print("time taken to calc old data",time.time() - start_time_oldData)
 
 
@@ -72,13 +72,13 @@ class MMService:
     def get_stock_for_live_else_place_order(self, stock_token, stock_name, fifteen_min_data):
         captial = 100000
         check_further_candle = False
-        lowest_so_far = 999999
+        # lowest_so_far = 999999
 
         first_open = fifteen_min_data[0][1]
         first_high = max([i[2] for i in fifteen_min_data[0:5]])
         first_low = min([i[3] for i in fifteen_min_data[0:5]])
         first_close = fifteen_min_data[4][4]
-        lowest_so_far =min(lowest_so_far, min([i[3] for i in fifteen_min_data[0:5]]))
+        # lowest_so_far =min(lowest_so_far, min([i[3] for i in fifteen_min_data[0:5]]))
         
         # if(first_close < first_open): # need not to check if its red directly check 60% condition
             # check if first closes below 60% or in lower 60% of candle
@@ -105,7 +105,7 @@ class MMService:
             if(second_close >= (second_high - threshhold_40)):
                 signal_candle = [second_open, second_high, second_low, second_close]
                 check_further_candle = False
-                lowest_so_far =min(lowest_so_far, min([i[3] for i in fifteen_min_data[5:10]]))
+                # lowest_so_far =min(lowest_so_far, min([i[3] for i in fifteen_min_data[5:10]]))
                 trigger_time = datetime.datetime.combine(datetime.date.today(), datetime.time(9, 25))
 
             if(check_further_candle):
@@ -117,10 +117,10 @@ class MMService:
                 if(third_close >= (third_high - threshhold_40)):
                     signal_candle = [third_open, third_high, third_low, third_close]
                     check_further_candle = False
-                    lowest_so_far =min(lowest_so_far, min([i[3] for i in fifteen_min_data[10:15]]))
+                    # lowest_so_far =min(lowest_so_far, min([i[3] for i in fifteen_min_data[10:15]]))
                     trigger_time = datetime.datetime.combine(datetime.date.today(), datetime.time(9, 30))
 
-            entry = lowest_so_far # TO-DO ask lower till signal candle or till 9:30 or lower just before signal candle
+            entry = min([i[3] for i in fifteen_min_data]) #low till 9:30
             if(signal_candle!=None):
                 stoploss = signal_candle[1]
 
@@ -129,17 +129,20 @@ class MMService:
                 quantity = risk/(stoploss - entry)
         
         if(entry!=None and stoploss != None and quantity != None):
-            trade = TradeDetails(stock_name, stock_token, entry, stoploss, quantity, trigger_time)
-            self.trade.append(trade)
-            # {
-            #     "entry_price":entry,
-            #     "stoploss" : stoploss,
-            #     "quantity" : quantity,
-            #     "stock_token": stock_token,
-            #     "stock_name": stock_name
-            # }
-            order_dervice = OrderService()
-            order_dervice.place_sllimit_order(trade)
+            tick = 0.05
+            entry_price = entry - tick
+            stoploss_price = stoploss + tick
+            
+            trade = TradeDetails(stock_name, stock_token, entry_price, stoploss_price, quantity, trigger_time)
+            self.trade.append({
+                "entry_price":entry_price,
+                "stoploss" : stoploss_price,
+                "quantity" : quantity,
+                "stock_token": stock_token,
+                "stock_name": stock_name
+            })
+            order_service = OrderService()
+            order_service.place_sllimit_order(trade)
 
             return False
 
@@ -190,14 +193,17 @@ class MMService:
             quantity = risk/(stoploss - entry)
         
         if(entry!=None and stoploss != None and quantity != None):
-            trade = TradeDetails(stock_name, stock_token, entry, stoploss, quantity, time.now())
-            self.trade.append(trade)
-            # {
-            #     "entry_price":entry,
-            #     "stoploss" : stoploss,
-            #     "quantity" : quantity,
-            #     "stock_token": stock_token,
-            #     "stock_name": stock_name
-            # }
-            order_dervice = OrderService()
-            order_dervice.place_sllimit_order(trade)
+            tick = 0.05
+            entry_price = entry - tick
+            stoploss_price = stoploss + tick
+            
+            trade = TradeDetails(stock_name, stock_token, entry_price, stoploss_price, quantity, time.now())
+            self.trade.append({
+                "entry_price":entry_price,
+                "stoploss" : stoploss_price,
+                "quantity" : quantity,
+                "stock_token": stock_token,
+                "stock_name": stock_name
+            })
+            order_service = OrderService()
+            order_service.place_sllimit_order(trade)

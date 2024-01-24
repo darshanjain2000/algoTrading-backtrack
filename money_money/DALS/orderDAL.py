@@ -8,7 +8,7 @@ from SmartApi.smartWebSocketV2 import SmartWebSocketV2
 from logzero import logger
 
 class OrderDAL:
-    def __init__(self, interval, symbolTokens):
+    def __init__(self):
         config_file = open("money_money/config.json")
         configs = json.load(config_file)
         API_KEY = configs["LiveAPI"]["KEY"]
@@ -32,24 +32,24 @@ class OrderDAL:
 
     def placeSLLimitOrder(self, stock_symbol, stock_token, entry_price, stoploss_price, quantity):
             try:
-                sllo_price = entry_price
+                sllo_price = entry_price - 0.05
                 orderparams = {
-                    "variety": "STOPLOSS",
+                    "variety": "NORMAL",
                     "tradingsymbol": f"{stock_symbol}",
                     "symboltoken": f"{stock_token}",
-                    "transactiontype": "BUY",
+                    "transactiontype": "SELL",
                     "exchange": "NSE",
                     "ordertype": "STOPLOSS_LIMIT",
                     "producttype": "INTRADAY",
                     "duration": "DAY",
                     "price": f"{sllo_price}",
-                    "squareoff": "0",
-                    "stoploss": f"{stoploss_price}",
+                    # "squareoff": "0",
+                    # "stoploss": f"{stoploss_price}",
                     "quantity": f"{quantity}"
                     }
                 # Method 1: Place an order and return the order ID
-                orderid = self.smartApi.placeOrder(orderparams)
-                logger.info(f"PlaceOrder : {orderid}")
-                return orderid
+                # orderid = self.smartApi.placeOrder(orderparams)
+                logger.info(f"PlaceOrder : orderid")
+                return "orderid"
             except Exception as e:
                 logger.exception(f"Order placement failed: {e}")
